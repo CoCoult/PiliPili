@@ -31,6 +31,8 @@ PiliPili-front/                前端
 docs/                          文档
 ├── 改动记录.md                 本项目的问题修复与功能改动全过程
 ├── 面试知识点.md               改动涉及的面试知识点整理
+├── Redis运维速查.md            Redis 状态查看、缓存验证、排查 SOP
+├── redis_status.ps1            一键 Redis 状态面板脚本
 └── sql/init.sql               数据库建表脚本（15 张表 + 分类基础数据）
 ```
 
@@ -125,7 +127,30 @@ mvn test -DskipTests=false -Dtest=VideoInfoCacheTest -pl PiliPili-common
 ## 文档
 
 - [`docs/改动记录.md`](docs/改动记录.md) —— 问题修复与功能改动全过程（含根因分析与涉及文件）
-- [`docs/面试知识点.md`](docs/面试知识点.md) —— 改动涉及的面试知识点（缓存三件套、分布式锁、序列化、事务、测试等）
+- [`docs/面试知识点.md`](docs/面试知识点.md) —— 改动涉及的面试知识点（缓存三件套、分布式锁、序列化、事务、测试、Redis 运维等）
+- [`docs/Redis运维速查.md`](docs/Redis运维速查.md) —— 怎么看 Redis 状态、怎么验证缓存生效、故障排查 SOP
+
+## 怎么查看 Redis 状态
+
+```powershell
+# 一键状态面板：连通性 / 内存 / 命中率 / 每个 key 的类型+TTL / 持久化 / 慢查询
+powershell -ExecutionPolicy Bypass -File docs\redis_status.ps1
+powershell -ExecutionPolicy Bypass -File docs\redis_status.ps1 -BigKeys            # 附带大 key 扫描
+powershell -ExecutionPolicy Bypass -File docs\redis_status.ps1 -MonitorSeconds 10  # 实时看命令流
+
+# 只想确认活着
+& "G:\redis\Redis-x64-3.2.100\redis-cli.exe" ping
+```
+
+详细的指标解读、命令速查表与排查流程见 [`docs/Redis运维速查.md`](docs/Redis运维速查.md)。
+
+## 文档维护约定
+
+> 后续任何**涉及面试知识点**的代码改动，都会自动同步记录：
+> 1. 在 `docs/改动记录.md` 追加一条（改了什么 / 为什么改 / 涉及文件 / 知识点）；
+> 2. 在 `docs/面试知识点.md` 补充对应知识点的原理与项目落地方式。
+>
+> 纯配置、纯文案类改动不入文档，避免流水账。
 
 ## 已知待优化项
 

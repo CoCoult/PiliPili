@@ -64,5 +64,11 @@ public interface VideoInfoService {
      * @param videoId
      */
     void addVideoPlayCount(String videoId);
+
+    /**
+     * 删除视频详情缓存（视频信息变更/审核通过/删除时调用，保证缓存与库一致）
+     * @param videoId
+     */
+    void deleteVideoInfoCache(String videoId);
 }
 

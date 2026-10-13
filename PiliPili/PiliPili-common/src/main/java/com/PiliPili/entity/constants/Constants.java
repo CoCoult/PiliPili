@@ -53,5 +53,18 @@ public class Constants {
     public static final String User_SCORE_MATRIX = REDIS_KEY_PREFIX + "userScoreMatrix";
     public static final String User_SCORE_AVERAGE = REDIS_KEY_PREFIX + "userScoreAverageList";
 
+    // ==================== 视频详情缓存（Cache-Aside + 缓存三件套）====================
+    /** 视频详情缓存：PiliPili:video:info:{videoId} */
+    public static final String REDIS_KEY_VIDEO_INFO = REDIS_KEY_PREFIX + "video:info:";
+    /** 视频详情缓存重建锁：PiliPili:video:info:lock:{videoId} */
+    public static final String REDIS_KEY_VIDEO_INFO_LOCK = REDIS_KEY_PREFIX + "video:info:lock:";
+    /** 缓存基础过期时间(秒)：30 分钟 */
+    public static final int VIDEO_INFO_CACHE_BASE_SECONDS = 30 * 60;
+    /** 缓存 TTL 随机抖动范围(秒)：0~5 分钟（防雪崩：避免批量 key 同时过期） */
+    public static final int VIDEO_INFO_CACHE_RANDOM_SECONDS = 5 * 60;
+    /** 空值缓存过期时间(秒)：2 分钟（防穿透：把"不存在"也缓存起来） */
+    public static final int VIDEO_INFO_NULL_CACHE_SECONDS = 2 * 60;
+    /** 重建锁自动过期时间(秒)：10 秒（防死锁：持锁线程挂掉后自动释放） */
+    public static final int VIDEO_INFO_LOCK_SECONDS = 10;
 
 }

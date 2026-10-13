@@ -84,6 +84,9 @@ public class VideoInfoPostServiceImpl implements VideoInfoPostService {
     @Resource
     private UserMapper userMapper;
 
+    @Resource
+    private VideoInfoService videoInfoService;
+
     //TODO 发布视频04，20min(后续配合前端再进行接口测试)
 
     /**
@@ -422,6 +425,8 @@ public class VideoInfoPostServiceImpl implements VideoInfoPostService {
         videoInfo.setLikeCount(0);
         videoInfo.setCommentCount(0);
         this.videoInfoMapper.insertOrUpdate(videoInfo);
+        // 审核通过 → 视频信息写入正式表，删除详情缓存（方法内部会在事务提交后才真正删除）
+        videoInfoService.deleteVideoInfoCache(videoId);
         //更新视频信息到正式文件表，先删除再添加
         VideoInfoFileQuery videoInfoFileQuery = new VideoInfoFileQuery();
         videoInfoFileQuery.setVideoId(videoId);

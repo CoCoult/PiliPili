@@ -3,6 +3,7 @@ package com.PiliPili.redis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -191,6 +192,57 @@ public class RedisUtils<V> {
         Set<V> topElements = redisTemplate.opsForZSet().reverseRange(key, 0, count);
         List<V> list = new ArrayList<>(topElements);
         return list;
+    }
+
+    // ==================== 分布式锁 / 缓存辅助 ====================
+
+    /**
+     * SET key value NX PX milliseconds —— 分布式锁的"抢锁"
+     * 语义：key 不存在时才设置成功（原子操作），并带自动过期
+     *
+     * @param key          锁的 key
+     * @param value        锁的值，务必放"唯一标识"（如 UUID），释放时可校验，防止误删别人的锁
+     * @param milliseconds 自动过期时间(毫秒)。必须设置！否则持锁线程挂掉会导致死锁
+     * @return true=抢到锁；false=已被别人持有
+     */
+    public boolean setnx(String key, V value, long milliseconds) {
+        try {
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(key, value, milliseconds, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success);
+        } catch (Exception e) {
+            logger.error("抢锁失败,key:{}", key, e);
+            return false;
+        }
+    }
+
+    /**
+     * 原子释放锁：用 Lua 脚本保证"判断值是否为自己 + 删除"两步不可分割
+     * <p>
+     * 为什么不能直接 delete？反例：
+     * A 拿锁 → A 业务卡住超过锁过期时间 → 锁自动释放 → B 拿到锁
+     * → A 业务执行完执行 delete，把 B 的锁删了 → C 又能拿锁，锁失效
+     *
+     * @return true=释放成功；false=锁已不属于自己（已过期或被别人持有）
+     */
+    public boolean releaseLock(String key, V value) {
+        String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+        try {
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(script, Long.class);
+            Long result = redisTemplate.execute(redisScript, Collections.singletonList(key), value);
+            return result != null && result > 0;
+        } catch (Exception e) {
+            logger.error("释放锁失败,key:{}", key, e);
+            return false;
+        }
+    }
+
+    /**
+     * 获取 key 的剩余过期时间(毫秒)
+     *
+     * @return >0 剩余毫秒；-1 永久；-2 key 不存在
+     */
+    public Long getExpire(String key) {
+        return redisTemplate.getExpire(key, TimeUnit.MILLISECONDS);
     }
 
 }

@@ -118,5 +118,14 @@
             <version>1.4.7</version>
         </dependency>
 
+        <!-- 测试：JUnit5 + Mockito + AssertJ + spring-test -->
+        <!-- 注意：父 pom 里配置了 <skipTests>true</skipTests>，
+             跑测试需显式加 -DskipTests=false -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 </project>

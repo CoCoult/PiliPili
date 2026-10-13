@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.UserMapper">
+    <select id="GetUserInfoByEmail" resultType="com.PiliPili.entity.pojo.User">
+        select *
+        from pilipili.user
+        where email = #{email}
+    </select>
+
+    <select id="GetUserInfoByUserName" resultType="com.PiliPili.entity.pojo.User">
+        select *
+        from pilipili.user
+        where user_name = #{userName}
+    </select>
+
+    <select id="GetUserInfoByUserId" resultType="com.PiliPili.entity.pojo.User">
+        select *
+        from pilipili.user
+        where user_id = #{userId}
+    </select>
+
+    <insert id="InsertUserInfo" flushCache="true">
+        insert into pilipili.user (user_id,
+                                   user_name,
+                                   email,
+                                   password,
+                                   gender,
+                                   create_time,
+                                   last_login_time,
+                                   status)
+        values (#{userId},
+                #{userName},
+                #{email},
+                #{passWord},
+                #{gender},
+                #{createTime},
+                #{lastLoginTime},
+                #{status})
+    </insert>
+
+    <update id="UpdateUserInfo" flushCache="true">
+        update pilipili.user
+        <set>
+            <if test="email != null">
+                email = #{email},
+            </if>
+            <if test="userName != null">
+                user_name = #{userName},
+            </if>
+            <if test="passWord != null">
+                password = #{passWord},
+            </if>
+            <if test="gender != null">
+                gender = #{gender},
+            </if>
+            <if test="birthday != null">
+                birthday = #{birthday},
+            </if>
+            <if test="avatar != null">
+                avatar = #{avatar},
+            </if>
+            <if test="school != null">
+                school = #{school},
+            </if>
+            <if test="selfIntroduction != null">
+                self_introduction = #{selfIntroduction},
+            </if>
+            <if test="lastLoginTime != null">
+                last_login_time = #{lastLoginTime},
+            </if>
+            <if test="lastLoginIp != null">
+                last_login_ip = #{lastLoginIp},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="notice != null">
+                notice = #{notice},
+            </if>
+            <if test="totalCoin != null">
+                total_coin = #{totalCoin},
+            </if>
+            <if test="currentCoin != null">
+                current_coin = #{currentCoin},
+            </if>
+            <if test="theme != null">
+                theme = #{theme}
+            </if>
+        </set>
+        where email = #{email}
+    </update>
+
+    <update id="UpdateUserInfoByUserId" flushCache="true">
+        update pilipili.user
+        <set>
+            <if test="email != null">
+                email = #{email},
+            </if>
+            <if test="userName != null">
+                user_name = #{userName},
+            </if>
+            <if test="passWord != null">
+                password = #{passWord},
+            </if>
+            <if test="gender != null">
+                gender = #{gender},
+            </if>
+            <if test="birthday != null">
+                birthday = #{birthday},
+            </if>
+            <if test="avatar != null">
+                avatar = #{avatar},
+            </if>
+            <if test="school != null">
+                school = #{school},
+            </if>
+            <if test="selfIntroduction != null">
+                self_introduction = #{selfIntroduction},
+            </if>
+            <if test="lastLoginTime != null">
+                last_login_time = #{lastLoginTime},
+            </if>
+            <if test="lastLoginIp != null">
+                last_login_ip = #{lastLoginIp},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="notice != null">
+                notice = #{notice},
+            </if>
+            <if test="theme != null">
+                theme = #{theme}
+            </if>
+        </set>
+        where user_id = #{userId}
+    </update>
+
+    <update id="UpdateUserCount">
+        update pilipili.user
+        <set>
+            <if test="field != null">
+                ${field} = ${field} + #{changeCount}
+            </if>
+
+            <if test="changeCount > 0">
+                ,total_coin = total_coin + #{changeCount}
+            </if>
+        </set>
+        where user_id = #{userId};
+    </update>
+
+    <select id="GetUserInfoList" resultType="com.PiliPili.entity.pojo.UserFocus">
+        select uf.*
+        <if test="queryType != null">
+            ,u.user_name userName, u.avatar userAvatar, u.self_introduction selfIntroduction,
+            (select count(1) from pilipili.user_focus f where uf.user_id = f.focus_user_id and uf.focus_user_id =
+            f.user_id) focusType
+        </if>
+        from pilipili.user_focus uf
+        <if test="queryType == 0">
+            right join pilipili.user u on uf.focus_user_id = u.user_id
+        </if>
+        <if test="queryType == 1">
+            right join pilipili.user u on uf.user_id = u.user_id
+        </if>
+        <where>
+            <if test="queryType == 0">
+                uf.user_id = #{userId}
+            </if>
+            <if test="queryType == 1">
+                uf.focus_user_id = #{userId}
+            </if>
+        </where>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <select id="GetUserInfoByUserIdList" resultType="com.PiliPili.entity.pojo.User">
+        select *
+        from pilipili.user
+        <where>
+            <if test="userInfoQuery.userIdList != null and userInfoQuery.userIdList.size() > 0">
+                user_id in (
+                <foreach collection="userInfoQuery.userIdList" separator="," item="item">
+                    #{item}
+                </foreach>)
+            </if>
+        </where>
+    </select>
+
+    <select id="GetAllUserCount" resultType="integer">
+        select count(1)
+        from pilipili.user
+    </select>
+
+    <select id="SelectNewUserCount" resultType="integer">
+        select count(1)
+        from pilipili.user
+        <where>
+            <if test="preDate != null">
+                <![CDATA[ DATE_FORMAT(create_time, '%Y-%m-%d') = #{preDate}]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="GetUserInfo" resultType="com.PiliPili.entity.pojo.User">
+        select *
+        from pilipili.user
+    </select>
+
+    <select id="GetAllUserId" resultType="string">
+        select user_id
+        from pilipili.user
+    </select>
+</mapper>

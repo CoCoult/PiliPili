@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.UserMessageMapper">
+    <select id="SelectCountByParam" resultType="integer">
+        select count(*)
+        from pilipili.user_message
+        <where>
+            <if test="userId != null">
+                user_id = #{userId}
+            </if>
+            <if test="messageType != null">
+                and message_type = #{messageType}
+            </if>
+            <if test="videoId != null">
+                and video_id = #{videoId}
+            </if>
+            <if test="readType != null">
+                and read_type = #{readType}
+            </if>
+        </where>
+    </select>
+
+    <insert id="InsertUserMessage">
+        insert into pilipili.user_message(user_id, video_id, message_type, send_user_id, read_type, create_time, extend_json)
+        values (#{userId},
+                #{videoId},
+                #{messageType},
+                #{sendUserId},
+                #{readType},
+                #{createTime},
+                #{extendJson})
+    </insert>
+
+    <select id="SelectCountGroup" resultType="com.PiliPili.entity.dto.UserMessageCountDto">
+        SELECT message_type, COUNT(*) messageCount
+        FROM pilipili.user_message
+        where user_id = #{userId} and read_type = 0
+        GROUP BY message_type;
+    </select>
+
+    <update id="UpdateUserMessageReadStatus">
+        update pilipili.user_message
+        set read_type = #{userMessage.readType}
+        where user_id = #{userMessageQuery.userId} and message_type = #{userMessageQuery.messageType}
+    </update>
+
+    <select id="SelectUserMessageList" resultType="com.PiliPili.entity.pojo.UserMessage">
+        select um.*, u.user_name, u.avatar, vi.video_name, vi.video_cover
+        from pilipili.user_message um left join pilipili.user u on um.send_user_id = u.user_id left join pilipili.video_info vi on um.video_id = vi.video_id
+        where um.user_id = #{userMessageQuery.userId} and message_type = #{userMessageQuery.messageType}
+    </select>
+
+    <delete id="DeleteUserMessageByUserIdAndMessageId">
+        delete
+        from pilipili.user_message
+        where user_id = #{userMessageQuery.userId} and message_id = #{userMessageQuery.messageId}
+    </delete>
+</mapper>

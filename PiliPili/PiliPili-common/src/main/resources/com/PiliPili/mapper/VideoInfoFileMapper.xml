@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoInfoFileMapper">
+    <select id="GetVideoPListByVideoId" resultType="com.PiliPili.entity.pojo.VideoInfoFile">
+        select *
+        from pilipili.video_info_file
+        <where>
+            <if test="videoId != null">
+                video_id = #{videoId}
+            </if>
+        </where>
+        order by ${orderByField}
+    </select>
+
+    <select id="GetVideoFileByFileId" resultType="com.PiliPili.entity.pojo.VideoInfoFile">
+        select *
+        from pilipili.video_info_file
+        where file_id = #{fileId}
+    </select>
+
+    <delete id="deleteByVideoId">
+        delete
+        from pilipili.video_info_file
+        where video_id = #{videoInfoFileQuery.videoId}
+    </delete>
+
+    <insert id="InsertBatch">
+        insert into pilipili.video_info_file (file_id, video_id, user_id, file_index, file_name, file_size, file_path,
+        duration)
+        values
+        <foreach collection="videoInfoFileList" item="item" separator=",">
+            (#{item.fileId}, #{item.videoId}, #{item.userId}, #{item.fileIndex}, #{item.fileName}, #{item.fileSize},
+            #{item.filePath}, #{item.duration})
+        </foreach>
+    </insert>
+</mapper>

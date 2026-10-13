@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.CategoryMapper">
+    <select id="GetAllCategory" resultType="com.PiliPili.entity.pojo.Category">
+        select *
+        from pilipili.category
+        order by sort
+    </select>
+
+    <select id="GetCategoryByCode" resultType="com.PiliPili.entity.pojo.Category">
+        select *
+        from pilipili.category
+        where category_code = #{categoryCode}
+    </select>
+
+    <select id="GetMaxCategorySort" resultType="integer">
+        select ifnull(max(sort), 0)
+        from pilipili.category
+        where p_category_id = #{pCategoryId}
+    </select>
+
+    <select id="GetCategoryById" resultType="com.PiliPili.entity.pojo.Category">
+        select *
+        from pilipili.category
+        where category_id = #{CategoryId}
+    </select>
+
+    <select id="GetCategoryByPid" resultType="com.PiliPili.entity.pojo.Category">
+        select *
+        from pilipili.category
+        where p_category_id = #{pCategoryId}
+    </select>
+
+    <insert id="InsertCategory" flushCache="true">
+        insert into pilipili.category (category_code,
+                                       category_name,
+                                       p_category_id,
+                                       icon,
+                                       background,
+                                       sort)
+        values (#{categoryCode},
+                #{categoryName},
+                #{pCategoryId},
+                #{icon},
+                #{background},
+                #{sort})
+    </insert>
+
+    <update id="UpdateCategoryInfo" flushCache="true">
+        update pilipili.category
+        <set>
+            <if test="categoryCode != null">
+                category_code = #{categoryCode},
+            </if>
+            <if test="categoryName != null">
+                category_name = #{categoryName},
+            </if>
+            <if test="icon != null">
+                icon = #{icon},
+            </if>
+            <if test="background != null">
+                background = #{background},
+            </if>
+        </set>
+        where category_id = #{categoryId}
+    </update>
+
+    <delete id="DeleteCategoryId" flushCache="true">
+        delete
+        from pilipili.category
+        where category_id = #{categoryId}
+    </delete>
+
+    <delete id="DeleteCategoryPid" flushCache="true">
+        delete
+        from pilipili.category
+        where p_category_id = #{pCategoryId}
+    </delete>
+</mapper>

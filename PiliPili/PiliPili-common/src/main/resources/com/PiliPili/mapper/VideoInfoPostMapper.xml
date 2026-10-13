@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoInfoPostMapper">
+    <select id="GetVideoPostInfoByVideoId" resultType="com.PiliPili.entity.pojo.VideoInfoPost">
+        select *
+        from pilipili.video_info_post
+        where video_id = #{videoId}
+    </select>
+
+    <insert id="InsertVideoInfoPost" flushCache="true">
+        insert into pilipili.video_info_post(video_id,
+                                             video_cover,
+                                             video_name,
+                                             introduction,
+                                             user_id,
+                                             create_time,
+                                             last_update_time,
+                                             p_category_id,
+                                             category_id,
+                                             status,
+                                             post_type,
+                                             tags,
+                                             interaction)
+        values (#{videoId},
+                #{videoCover},
+                #{videoName},
+                #{introduction},
+                #{userId},
+                #{createTime},
+                #{lastUpdateTime},
+                #{pCategoryId},
+                #{categoryId},
+                #{status},
+                #{postType},
+                #{tags},
+                #{interaction});
+    </insert>
+
+    <update id="UpdateVideoInfoPost" flushCache="true">
+        update pilipili.video_info_post
+        <set>
+            <if test="videoCover != null">
+                video_cover = #{videoCover},
+            </if>
+            <if test="videoName != null">
+                video_name = #{videoName},
+            </if>
+            <if test="introduction != null">
+                introduction = #{introduction},
+            </if>
+            <if test="createTime != null">
+                create_time = #{createTime},
+            </if>
+            <if test="lastUpdateTime != null">
+                last_update_time = #{lastUpdateTime},
+            </if>
+            <if test="pCategoryId != null">
+                p_category_id = #{pCategoryId},
+            </if>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="postType != null">
+                post_type = #{postType},
+            </if>
+            <if test="originInfo != null">
+                origin_info = #{originInfo},
+            </if>
+            <if test="tags != null">
+                tags = #{tags},
+            </if>
+            <if test="interaction != null">
+                interaction = #{interaction},
+            </if>
+            <if test="duration != null">
+                duration = #{duration},
+            </if>
+        </set>
+        where video_id = #{videoId}
+    </update>
+
+    <update id="UpdateByVideoId">
+        update pilipili.video_info_post
+        <set>
+            <if test="videoInfoPost.videoCover != null">
+                video_cover = #{videoInfoPost.videoCover},
+            </if>
+            <if test="videoInfoPost.videoName != null">
+                video_name = #{videoInfoPost.videoName},
+            </if>
+            <if test="videoInfoPost.introduction != null">
+                introduction = #{videoInfoPost.introduction},
+            </if>
+            <if test="videoInfoPost.createTime != null">
+                create_time = #{videoInfoPost.createTime},
+            </if>
+            <if test="videoInfoPost.lastUpdateTime != null">
+                last_update_time = #{videoInfoPost.lastUpdateTime},
+            </if>
+            <if test="videoInfoPost.pCategoryId != null">
+                p_category_id = #{videoInfoPost.pCategoryId},
+            </if>
+            <if test="videoInfoPost.categoryId != null">
+                category_id = #{videoInfoPost.categoryId},
+            </if>
+            <if test="videoInfoPost.status != null">
+                status = #{videoInfoPost.status},
+            </if>
+            <if test="videoInfoPost.postType != null">
+                post_type = #{videoInfoPost.postType},
+            </if>
+            <if test="videoInfoPost.originInfo != null">
+                origin_info = #{videoInfoPost.originInfo},
+            </if>
+            <if test="videoInfoPost.tags != null">
+                tags = #{videoInfoPost.tags},
+            </if>
+            <if test="videoInfoPost.interaction != null">
+                interaction = #{videoInfoPost.interaction},
+            </if>
+            <if test="videoInfoPost.duration != null">
+                duration = #{videoInfoPost.duration},
+            </if>
+        </set>
+        where video_id = #{videoId}
+    </update>
+
+    <select id="SelectVideoByStatus" resultType="com.PiliPili.entity.dto.VideoInfoPostDTO">
+        select v.*
+        <if test="videoInfoQuery.queryCount">
+            , c.play_count, c.like_count, c.barrage_count, c.comment_count, c.coin_count, c.collect_count,
+            c.recommend_type
+        </if>
+        <if test="videoInfoQuery.queryUserInfo">
+            , u.user_name, u.avatar
+        </if>
+        from pilipili.video_info_post v
+        <if test="videoInfoQuery.queryCount">
+            left join pilipili.video_info c on v.video_id = c.video_id
+        </if>
+        <if test="videoInfoQuery.queryUserInfo">
+            left join pilipili.user u on v.user_id = u.user_id
+        </if>
+        <where>
+            <if test="videoInfoQuery.userId != null">
+                v.user_id = #{videoInfoQuery.userId}
+            </if>
+            <if test="videoInfoQuery.status != null">
+                and v.status = #{videoInfoQuery.status}
+            </if>
+            <if test="videoInfoQuery.videoNameFuzzy != null and videoInfoQuery.videoNameFuzzy != ''">
+                and v.video_name like concat('%', #{videoInfoQuery.videoNameFuzzy}, '%')
+            </if>
+            <if test="videoInfoQuery.excludeStatus != null and videoInfoQuery.excludeStatus.length > 0">
+                and v.status not in (<foreach collection="videoInfoQuery.excludeStatus" separator="," item="item">
+                #{item}
+            </foreach> )
+            </if>
+        </where>
+        <if test="videoInfoQuery.orderByField != null">
+            order by ${videoInfoQuery.orderByField}
+        </if>
+    </select>
+
+    <select id="SelectCountByUserIdAndStatus" resultType="integer">
+        select count(*)
+        from pilipili.video_info_post
+        <where>
+            <if test="query.userId != null">
+                user_id = #{query.userId}
+            </if>
+            <if test="query.status != null">
+                and status = #{query.status}
+            </if>
+            <if test="query.excludeStatus != null and query.excludeStatus.length > 0">
+                and status not in (<foreach collection="query.excludeStatus" separator="," item="item">
+                #{item}
+            </foreach> )
+            </if>
+        </where>
+    </select>
+
+    <update id="updateByParams">
+        update pilipili.video_info_post
+        <set>
+            <if test="videoInfoPost.videoCover != null">
+                video_cover = #{videoInfoPost.videoCover},
+            </if>
+            <if test="videoInfoPost.videoName != null">
+                video_name = #{videoInfoPost.videoName},
+            </if>
+            <if test="videoInfoPost.introduction != null">
+                introduction = #{videoInfoPost.introduction},
+            </if>
+            <if test="videoInfoPost.createTime != null">
+                create_time = #{videoInfoPost.createTime},
+            </if>
+            <if test="videoInfoPost.lastUpdateTime != null">
+                last_update_time = #{videoInfoPost.lastUpdateTime},
+            </if>
+            <if test="videoInfoPost.pCategoryId != null">
+                p_category_id = #{videoInfoPost.pCategoryId},
+            </if>
+            <if test="videoInfoPost.categoryId != null">
+                category_id = #{videoInfoPost.categoryId},
+            </if>
+            <if test="videoInfoPost.status != null">
+                status = #{videoInfoPost.status},
+            </if>
+            <if test="videoInfoPost.postType != null">
+                post_type = #{videoInfoPost.postType},
+            </if>
+            <if test="videoInfoPost.originInfo != null">
+                origin_info = #{videoInfoPost.originInfo},
+            </if>
+            <if test="videoInfoPost.tags != null">
+                tags = #{videoInfoPost.tags},
+            </if>
+            <if test="videoInfoPost.interaction != null">
+                interaction = #{videoInfoPost.interaction},
+            </if>
+            <if test="videoInfoPost.duration != null">
+                duration = #{videoInfoPost.duration},
+            </if>
+        </set>
+        <where>
+            <if test="videoInfoPostQuery.videoId != null">
+                video_id = #{videoInfoPostQuery.videoId}
+            </if>
+            <if test="videoInfoPostQuery.userId != null">
+                and user_id = #{videoInfoPostQuery.userId}
+            </if>
+            <if test="videoInfoPostQuery.status != null">
+                and status = #{videoInfoPostQuery.status}
+            </if>
+        </where>
+    </update>
+
+    <select id="selectByVideoId" resultType="com.PiliPili.entity.pojo.VideoInfoPost">
+        select * from pilipili.video_info_post
+        <where>
+            <if test="videoId != null">
+                video_id = #{videoId}
+            </if>
+        </where>
+    </select>
+
+    <delete id="DeleteByVideoId">
+        delete
+        from pilipili.video_info_post
+        where video_id = #{videoId}
+    </delete>
+</mapper>

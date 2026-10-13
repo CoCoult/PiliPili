@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoInfoFilePostMapper">
+    <select id="GetVideoInfoFilePostList" resultType="com.PiliPili.entity.pojo.VideoInfoFilePost">
+        select *
+        from pilipili.video_info_file_post
+        where video_id = #{videoId}
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <delete id="DeleteFileByIdList" flushCache="true">
+        delete
+        from pilipili.video_info_file_post
+        where user_id = #{userId} and
+        file_id in (<foreach collection="FileIdList" item="fileId" separator=",">#{fileId}</foreach>)
+    </delete>
+
+    <insert id="InsertVideoFilePost">
+        insert into pilipili.video_info_file_post(file_id, upload_id, video_id, user_id, file_index, file_name,
+                                                  file_size, file_path, update_type, transfer_result, duration)
+        values (#{fileId}, #{uploadId}, #{videoId}, #{userId}, #{fileIndex}, #{fileName}, #{fileSize}, #{filePath},
+                #{updateType}, #{transferResult}, #{duration});
+    </insert>
+
+    <update id="UpdateVideoFilePost">
+        update pilipili.video_info_file_post
+        <set>
+            <if test="fileId != null">
+                file_id = #{fileId},
+            </if>
+            <if test="uploadId != null">
+                upload_id = #{uploadId},
+            </if>
+            <if test="videoId != null">
+                video_id = #{videoId},
+            </if>
+            <if test="fileIndex != null">
+                file_index = #{fileIndex},
+            </if>
+            <if test="fileName != null">
+                file_name = #{fileName},
+            </if>
+            <if test="fileSize != null">
+                file_size = #{fileSize},
+            </if>
+            <if test="filePath != null">
+                file_path = #{filePath},
+            </if>
+            <if test="updateType != null">
+                update_type = #{updateType},
+            </if>
+            <if test="duration != null">
+                duration = #{duration},
+            </if>
+        </set>
+        where user_id = #{userId} and file_id = #{fileId};
+    </update>
+
+    <update id="UpdateVideoFilePostByUploadIdAndUserId">
+        update pilipili.video_info_file_post
+        <set>
+            <if test="videoInfoFilePost.fileId != null">
+                file_id = #{videoInfoFilePost.fileId},
+            </if>
+            <if test="videoInfoFilePost.uploadId != null">
+                upload_id = #{videoInfoFilePost.uploadId},
+            </if>
+            <if test="videoInfoFilePost.videoId != null">
+                video_id = #{videoInfoFilePost.videoId},
+            </if>
+            <if test="videoInfoFilePost.fileIndex != null">
+                file_index = #{videoInfoFilePost.fileIndex},
+            </if>
+            <if test="videoInfoFilePost.fileName != null">
+                file_name = #{videoInfoFilePost.fileName},
+            </if>
+            <if test="videoInfoFilePost.fileSize != null">
+                file_size = #{videoInfoFilePost.fileSize},
+            </if>
+            <if test="videoInfoFilePost.filePath != null">
+                file_path = #{videoInfoFilePost.filePath},
+            </if>
+            <if test="videoInfoFilePost.updateType != null">
+                update_type = #{videoInfoFilePost.updateType},
+            </if>
+            <if test="videoInfoFilePost.duration != null">
+                duration = #{videoInfoFilePost.duration},
+            </if>
+            <if test="videoInfoFilePost.transferResult != null">
+                transfer_result = #{videoInfoFilePost.transferResult},
+            </if>
+        </set>
+        where user_id = #{userId} and upload_id = #{uploadId};
+    </update>
+
+    <select id="SelectCount" resultType="integer">
+        select count(*)
+        from pilipili.video_info_file_post
+        where video_id = #{videoInfoFilePost.videoId}
+          and transfer_result = #{videoInfoFilePost.transferResult}
+    </select>
+
+    <select id="SumDuration" resultType="integer">
+        select ifnull(sum(duration), 0)
+        from pilipili.video_info_file_post
+        where video_id = #{videoId};
+    </select>
+
+    <update id="updateByParams">
+        update pilipili.video_info_file_post
+        <set>
+            <if test="videoInfoFilePost.fileId != null">
+                file_id = #{videoInfoFilePost.fileId},
+            </if>
+            <if test="videoInfoFilePost.uploadId != null">
+                upload_id = #{videoInfoFilePost.uploadId},
+            </if>
+            <if test="videoInfoFilePost.videoId != null">
+                video_id = #{videoInfoFilePost.videoId},
+            </if>
+            <if test="videoInfoFilePost.fileIndex != null">
+                file_index = #{videoInfoFilePost.fileIndex},
+            </if>
+            <if test="videoInfoFilePost.fileName != null">
+                file_name = #{videoInfoFilePost.fileName},
+            </if>
+            <if test="videoInfoFilePost.fileSize != null">
+                file_size = #{videoInfoFilePost.fileSize},
+            </if>
+            <if test="videoInfoFilePost.filePath != null">
+                file_path = #{videoInfoFilePost.filePath},
+            </if>
+            <if test="videoInfoFilePost.updateType != null">
+                update_type = #{videoInfoFilePost.updateType},
+            </if>
+            <if test="videoInfoFilePost.duration != null">
+                duration = #{videoInfoFilePost.duration},
+            </if>
+            <if test="videoInfoFilePost.transferResult != null">
+                transfer_result = #{videoInfoFilePost.transferResult},
+            </if>
+        </set>
+        <where>
+            <if test="videoFilePostQuery.videoId != null">
+                video_id = #{videoFilePostQuery.videoId}
+            </if>
+        </where>
+    </update>
+
+    <delete id="DeleteByVideoId">
+        delete
+        from pilipili.video_info_file_post
+        where video_id = #{query.videoId}
+    </delete>
+</mapper>

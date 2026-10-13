@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.SeriesVideoMapper">
+    <select id="GetMaxSortBySeriesId" resultType="integer">
+        select ifnull(max(sort), 0)
+        from pilipili.series_video
+        where series_id = #{seriesId}
+    </select>
+
+    <insert id="InsertBatch">
+        <foreach collection="seriesVideoList" separator=";" item="item">
+            insert into pilipili.series_video(series_id, video_id, user_id, sort)
+            values
+
+            (
+            #{item.seriesId},
+            #{item.videoId},
+            #{item.userId},
+            #{item.sort}
+            )
+            ON DUPLICATE KEY UPDATE
+            sort = #{item.sort}
+        </foreach>
+    </insert>
+
+    <select id="GetVideoListBySeriesId" resultType="com.PiliPili.entity.pojo.SeriesVideo">
+        select *
+        <if test="selectVideoInfo != null and selectVideoInfo">
+            , vi.video_name videoName, vi.video_cover videoCover, vi.play_count playCount, vi.create_time createTime
+        </if>
+        from pilipili.series_video
+        <if test="selectVideoInfo != null and selectVideoInfo">
+            sv inner join pilipili.video_info vi on sv.video_id = vi.video_id
+        </if>
+        <where>
+            <if test="seriesId != null">
+                series_id = #{seriesId}
+            </if>
+        </where>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <delete id="DeleteVideoBySeriesId">
+        delete
+        from pilipili.series_video
+        where user_id = #{userId} and series_id = #{seriesId}
+        <if test="videoId != null">
+            and video_id = #{videoId}
+        </if>
+    </delete>
+
+    <update id="UpdateBatch">
+        UPDATE pilipili.series_video
+        <set>
+            sort = CASE
+            <foreach collection="seriesVideoList" item="item">
+                WHEN series_id = #{item.seriesId} AND video_id = #{item.videoId} THEN #{item.sort}
+            </foreach>
+            ELSE sort  <!-- 保留原值，避免意外修改 -->
+            END
+        </set>
+        WHERE (series_id, video_id) IN
+        <foreach collection="seriesVideoList" item="item" open="(" separator="," close=")">
+            (#{item.seriesId}, #{item.videoId})
+        </foreach>
+    </update>
+</mapper>

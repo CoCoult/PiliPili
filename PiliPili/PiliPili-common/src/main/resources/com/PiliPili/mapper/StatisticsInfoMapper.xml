@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.StatisticsInfoMapper">
+    <select id="SelectStatisticFans" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select focus_user_id userId, count(1) statisticsCount
+        from pilipili.user_focus
+        where
+            <![CDATA[ DATE_FORMAT(focus_time, '%Y-%m-%d') = #{StatisticData}]]>
+        group by focus_user_id
+    </select>
+
+    <select id="SelectStatisticComment" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select video_user_id userId, count(1) statisticsCount
+        from pilipili.video_comment
+        where
+            <![CDATA[ DATE_FORMAT(post_time, '%Y-%m-%d') = #{StatisticData}]]>
+        group by video_user_id
+    </select>
+
+    <select id="SelectStatisticAction" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select video_user_id userId, count(1) statisticsCount, action_type dataType
+        from pilipili.user_action
+        where
+        <![CDATA[ DATE_FORMAT(action_time, '%Y-%m-%d') = #{StatisticData}]]>
+        and action_type in (
+        <foreach collection="actionTypeList" separator="," item="item">
+            #{item}
+        </foreach>
+        )
+        group by video_user_id, action_type
+    </select>
+
+    <select id="SelectBarrage" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select vi.user_id , count(*) statisticsCount, 6 dataType
+        from pilipili.video_barrage
+        left join pilipili.video_info vi on video_barrage.video_id = vi.video_id
+        where
+        <![CDATA[ DATE_FORMAT(post_time, '%Y-%m-%d') = #{StatisticData}]]>
+        group by vi.user_id
+    </select>
+
+    <insert id="InsertBatch">
+        insert into pilipili.statistics_info(statistics_date, user_id, data_type, statistics_count)
+        VALUES
+        <foreach collection="statisticsInfoList" separator="," item="item">
+            (#{item.statisticsDate}, #{item.userId}, #{item.dataType}, #{item.statisticsCount})
+        </foreach>
+    </insert>
+
+    <select id="GetStatisticInfoByParam" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select * from pilipili.statistics_info
+        <where>
+            <if test="query.userId != null">
+                user_id = #{query.userId}
+            </if>
+            <if test="query.dataType != null">
+                and data_type = #{query.dataType}
+            </if>
+            <if test="query.statisticsDate != null">
+                and statistics_date = #{query.statisticsDate}
+            </if>
+            <if test="query.statisticsDateStart != null">
+                <![CDATA[ and  statistics_date >= #{query.statisticsDateStart}]]>
+            </if>
+            <if test="query.statisticsDateEnd != null">
+                <![CDATA[ and  statistics_date <= #{query.statisticsDateEnd}]]>
+            </if>
+        </where>
+        <if test="query.orderBy != null">
+            order by ${query.orderBy}
+        </if>
+    </select>
+
+    <select id="GetAllStatisticByUserId" resultType="java.util.Map">
+        select
+        ifnull(sum(play_count), 0) playCount,
+        ifnull(sum(like_count), 0) likeCount,
+        ifnull(sum(barrage_count), 0) barrageCount,
+        ifnull(sum(comment_count), 0) commentCount,
+        ifnull(sum(coin_count), 0) coinCount,
+        ifnull(sum(collect_count), 0) collectCount
+        from pilipili.video_info
+        <where>
+            <if test="userId != null">
+                user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+    <select id="SelectStatisticInfoByParamAdmin" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select
+        ifnull(sum(statistics_count), 0) statisticsCount, data_type
+        from pilipili.statistics_info
+        <where>
+            <if test="query.userId != null">
+                user_id = #{query.userId}
+            </if>
+            <if test="query.dataType != null">
+                and data_type = #{query.dataType}
+            </if>
+            <if test="query.statisticsDate != null">
+                and statistics_date = #{query.statisticsDate}
+            </if>
+            <if test="query.statisticsDateStart != null">
+                <![CDATA[ and  statistics_date >= #{query.statisticsDateStart}]]>
+            </if>
+            <if test="query.statisticsDateEnd != null">
+                <![CDATA[ and  statistics_date <= #{query.statisticsDateEnd}]]>
+            </if>
+        </where>
+            group by data_type, statistics_date
+    </select>
+
+    <select id="SelectUserWeekNewCount" resultType="com.PiliPili.entity.pojo.StatisticsInfo">
+        select
+        ifnull(count(1), 0) statisticsCount, DATE_FORMAT(create_time, '%Y-%m-%d') statisticsDate
+        from pilipili.user
+        <where>
+            <if test="query.statisticsDateStart != null">
+                <![CDATA[ and  DATE_FORMAT(create_time, '%Y-%m-%d') >= #{query.statisticsDateStart}]]>
+            </if>
+            <if test="query.statisticsDateEnd != null">
+                <![CDATA[ and  DATE_FORMAT(create_time, '%Y-%m-%d') <= #{query.statisticsDateEnd}]]>
+            </if>
+        </where>
+        group by statisticsDate
+    </select>
+</mapper>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.UserActionMapper">
+    <insert id="SaveUserAction">
+        insert into pilipili.user_action(action_id, video_id, video_user_id, comment_id, action_type, action_count,
+                                         user_id, action_time)
+        values (#{actionId},
+                #{videoId},
+                #{videoUserId},
+                #{commentId},
+                #{actionType},
+                #{actionCount},
+                #{userId},
+                #{actionTime});
+    </insert>
+
+    <select id="GetUserActionById" resultType="com.PiliPili.entity.pojo.UserAction">
+        select *
+        from pilipili.user_action
+        where video_id = #{videoId}
+        and user_id = #{userId}
+        and action_type = #{actionType}
+        <if test="commentId != null">
+            and comment_id = #{commentId}
+        </if>
+    </select>
+
+    <select id="GetUserActionByVideoId" resultType="com.PiliPili.entity.pojo.UserAction">
+        select *
+        from pilipili.user_action
+        where video_id = #{videoId} and user_id = #{userId}
+        <if test="actionType.length > 0">
+            and action_type in(
+            <foreach collection="actionType" separator="," item="type">
+                #{type}
+            </foreach>)
+        </if>
+
+    </select>
+
+    <select id="GetUserActionList" resultType="com.PiliPili.entity.pojo.UserAction">
+        select *
+        <if test="collectVideoInfo">
+            , v.video_cover, v.video_name
+        </if>
+        from pilipili.user_action u
+        <if test="collectVideoInfo">
+            right join pilipili.video_info v on u.video_id = v.video_id
+        </if>
+        where u.user_id = #{userId} and action_type in(
+        <foreach collection="actionType" separator=","
+                 item="actionType">
+            #{actionType}
+        </foreach>)
+        order by ${orderByField}
+    </select>
+
+    <delete id="DeleteUserAction">
+        delete
+        from pilipili.user_action
+        where action_id = #{actionId}
+    </delete>
+
+    <select id="GetUserActionCount" resultType="com.PiliPili.entity.dto.CountInfoDto">
+        SELECT
+            IFNULL(sum(like_count), 0) likeCount,
+            IFNULL(sum(play_count), 0) playCount
+        FROM
+            pilipili.video_info
+        WHERE
+            user_id = #{userId}
+    </select>
+
+    <select id="GetUserActionListByUserId" resultType="com.PiliPili.entity.pojo.UserAction">
+        select action_id, user_id, video_id, action_type, DATE_FORMAT(action_time, '%Y-%m-%d')
+        from pilipili.user_action
+        where user_id = #{userId}
+    </select>
+
+</mapper>

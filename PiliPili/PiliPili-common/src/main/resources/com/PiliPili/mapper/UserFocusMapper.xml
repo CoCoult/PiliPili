@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.UserFocusMapper">
+    <select id="GetUserFocus" resultType="com.PiliPili.entity.pojo.UserFocus">
+        select *
+        from pilipili.user_focus
+        where focus_user_id = #{focusUserId} and user_id = #{userId}
+    </select>
+
+    <select id="GetUserFocusByFocusUserId" resultType="com.PiliPili.entity.pojo.UserFocus">
+        select *
+        from pilipili.user_focus
+        where focus_user_id = #{focusUserId}
+    </select>
+
+    <insert id="InsertUserFocus">
+        insert into pilipili.user_focus(user_id, focus_user_id, focus_time)
+        values (#{userId}, #{focusUserId}, #{focusTime});
+    </insert>
+
+    <delete id="DeleteUserFocus">
+        delete
+        from pilipili.user_focus
+        where user_id = #{userId}
+          and focus_user_id = #{focusUserId};
+    </delete>
+
+    <select id="GetUserFocusByUserId" resultType="integer">
+        select count(user_id)
+        from pilipili.user_focus
+        where user_id = #{userId}
+    </select>
+
+    <select id="GetUserFansByUserId" resultType="integer">
+        select count(user_id)
+        from pilipili.user_focus
+        where focus_user_id = #{userId}
+    </select>
+
+    <select id="GetUserList" resultType="string">
+        select *
+        from pilipili.user_focus
+        where
+            <if test="queryType == 0">
+                user_id = #{userId}
+            </if>
+            <if test="queryType == 1">
+                focus_user_id = #{userId}
+            </if>
+        order by ${orderByField}
+    </select>
+</mapper>

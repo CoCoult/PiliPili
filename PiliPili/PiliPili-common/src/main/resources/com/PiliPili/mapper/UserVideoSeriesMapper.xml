@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.UserVideoSeriesMapper">
+    <select id="GetUserSeriesInfoList" resultType="com.PiliPili.entity.pojo.UserVideoSeries">
+        SELECT svv.*,
+               vi.video_cover
+        FROM (SELECT *,
+                     (SELECT video_id
+                      FROM pilipili.series_video sv
+                      WHERE sv.series_id = uvs.series_id
+                      ORDER BY sort ASC
+                      LIMIT 1) video_id
+              FROM pilipili.user_video_series uvs
+              WHERE user_id = #{userId}) svv
+                 LEFT JOIN pilipili.video_info vi ON vi.video_id = svv.video_id
+        order by sort
+    </select>
+
+    <insert id="InsertVideoSeries" useGeneratedKeys="true" keyProperty="seriesId">
+        insert into pilipili.user_video_series(series_name, series_description, user_id, sort, update_time)
+        values (#{seriesName},
+                #{seriesDescription},
+                #{userId},
+                #{sort},
+                now());
+    </insert>
+
+    <select id="GetMaxSeriesSort" resultType="integer">
+        select ifnull(MAX(sort), 0)
+        from pilipili.user_video_series
+        where user_id = #{userId};
+    </select>
+
+    <select id="GetUserSeriesBySeriesId" resultType="com.PiliPili.entity.pojo.UserVideoSeries">
+        select *
+        from pilipili.user_video_series
+        where series_id = #{seriesId};
+    </select>
+
+    <update id="UpdateUserVideoSeries">
+        update pilipili.user_video_series
+        <set>
+            series_name = #{seriesName}
+            <if test="seriesDescription != null">
+                , series_description = #{seriesDescription}
+            </if>
+            <if test="updateTime != null">
+                , update_time = #{updateTime}
+            </if>
+        </set>
+        where series_id = #{seriesId};
+    </update>
+
+    <delete id="DeleteUserVideoSeriesBySeriesId">
+        delete
+        from pilipili.user_video_series
+        where series_id = #{seriesId}
+          and user_id = #{userId}
+    </delete>
+
+    <resultMap id="result_video_list" type="com.PiliPili.entity.pojo.UserVideoSeries">
+        <result column="series_id" property="seriesId"/>
+        <result column="series_name" property="seriesName"/>
+        <result column="user_id" property="userId"/>
+        <result column="seriesDescription" property="seriesDescription"/>
+        <result column="sort" property="sort"/>
+
+        <!--子查询获取当前合集的前五个视频-->
+        <collection property="videoInfoList"
+                    column="series_id"
+                    ofType="com.PiliPili.entity.pojo.VideoInfo"
+                    select="GetSeriesVideoListForFive"/>
+    </resultMap>
+
+    <select id="GetSeriesVideoListForFive" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select vi.*
+        from pilipili.series_video sv
+                 inner join pilipili.video_info vi on sv.video_id = vi.video_id
+        where series_id = #{sriesId}
+        order by sv.sort
+        limit 5
+
+    </select>
+
+    <select id="GetVideoSeriesListWithVideo" resultMap="result_video_list">
+        select *
+        from pilipili.user_video_series
+        where user_id = #{userId}
+    </select>
+
+    <update id="UpdateVideoSeriesSort">
+        <foreach collection="userVideoSeriesList" separator=";" item="item">
+            update pilipili.user_video_series set sort = #{item.sort}
+            where user_id = #{item.userId} and series_id = #{item.seriesId}
+        </foreach>
+    </update>
+</mapper>

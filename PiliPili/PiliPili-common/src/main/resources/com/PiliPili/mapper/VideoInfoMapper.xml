@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoInfoMapper">
+    <select id="GetRecommendVideo" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select *
+        <if test="getUserInfo == true">
+            ,u.user_name, u.avatar
+        </if>
+        from pilipili.video_info as vInfo
+        <if test="getUserInfo == true">
+            left join pilipili.user as u on vInfo.user_id = u.user_id
+        </if>
+        where recommend_type = 1
+        order by vInfo.create_time desc
+    </select>
+
+    <select id="GetVideo" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select *
+        <if test="getUserInfo == true">
+            ,u.user_name, u.avatar
+        </if>
+        from pilipili.video_info as vinfo
+        <if test="getUserInfo == true">
+            left join pilipili.user as u on vInfo.user_id = u.user_id
+        </if>
+        <where>
+            <if test="pCategoryId != null">
+                p_category_id = #{pCategoryId}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="recommendType != null">
+                and recommend_type = #{recommendType}
+            </if>
+            <if test="lastPlayHour != null">
+                and vinfo.last_play_time >= date_sub(now(), interval #{lastPlayHour} hour)
+            </if>
+        </where>
+        order by ${orderByField}
+    </select>
+
+    <select id="GetVideoInfoByVideoId" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select *
+        from pilipili.video_info
+        where video_id = #{videoId}
+    </select>
+
+    <update id="UpdateVideoCount">
+        update pilipili.video_info
+        set ${field} = ${field} + #{changeCount}, last_update_time = now()
+        <if test="field == 'play_count' ">
+            ,last_play_time = now()
+        </if>
+
+        where video_id = #{videoId};
+    </update>
+
+    <select id="GetVideoList" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select *
+        from pilipili.video_info
+        <where>
+            <if test="userId != null">
+                user_id = #{userId}
+            </if>
+            <if test="videoNameLike != null">
+                and video_name like concat('%', #{videoNameLike}, '%')
+            </if>
+            <if test="excludeVideoId != null and excludeVideoId.length > 0">
+                and video_id not in (
+                <foreach collection="excludeVideoId" separator="," item="videoId">
+                    #{videoId}
+                </foreach>
+                )
+            </if>
+            <if test="videoIdArray != null and videoIdArray.length > 0">
+                and video_id in (
+                <foreach collection="videoIdArray" separator="," item="videoId">
+                    #{videoId}
+                </foreach>
+                )
+            </if>
+        </where>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <select id="GetVideoCount" resultType="integer">
+        select count(1)
+        from pilipili.video_info
+        <if test="videoIdArray != null">
+            where user_id = #{userId} and video_id in (
+            <foreach collection="videoIdArray" separator="," item="videoId">
+                #{videoId}
+            </foreach>)
+        </if>
+    </select>
+
+    <select id="GetVideoCountByCategoryId" resultType="integer">
+        select count(*)
+        from pilipili.video_info
+        <where>
+            <if test="categoryIdOrPCategoryId != null">
+                category_id = #{categoryIdOrPCategoryId} or p_category_id = #{categoryIdOrPCategoryId}
+            </if>
+        </where>
+    </select>
+
+    <select id="SelectByVideoId" resultType="com.PiliPili.entity.pojo.VideoInfo">
+        select *
+        from pilipili.video_info
+        <where>
+            <if test="videoId != null">
+                video_id = #{videoId}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insertOrUpdate">
+        INSERT INTO pilipili.video_info (video_id,
+                                         video_cover,
+                                         video_name,
+                                         introduction,
+                                         user_id,
+                                         create_time,
+                                         last_update_time,
+                                         p_category_id,
+                                         category_id,
+                                         post_type,
+                                         origin_info,
+                                         tags,
+                                         interaction,
+                                         duration,
+                                         play_count,
+                                         like_count,
+                                         collect_count,
+                                         barrage_count,
+                                         comment_count,
+                                         coin_count,
+                                         recommend_type,
+                                         last_play_time)
+        VALUES (#{videoId},
+                #{videoCover},
+                #{videoName},
+                #{introduction},
+                #{userId},
+                #{createTime},
+                #{lastUpdateTime},
+                #{pCategoryId},
+                #{categoryId},
+                #{postType},
+                #{originInfo},
+                #{tags},
+                #{interaction},
+                #{duration},
+                #{playCount},
+                #{likeCount},
+                #{collectCount},
+                #{barrageCount},
+                #{commentCount},
+                #{coinCount},
+                #{recommendType},
+                #{lastPlayTime})
+        ON DUPLICATE KEY UPDATE video_cover      = #{videoCover},
+                                video_name       = #{videoName},
+                                introduction     = #{introduction},
+                                user_id          = #{userId},
+                                last_update_time = #{lastUpdateTime},
+                                p_category_id    = #{pCategoryId},
+                                category_id      = #{categoryId},
+                                post_type        = #{postType},
+                                origin_info      = #{originInfo},
+                                tags             = #{tags},
+                                interaction      = #{interaction},
+                                duration         = #{duration},
+                                play_count       = #{playCount},
+                                like_count       = #{likeCount},
+                                collect_count    = #{collectCount},
+                                barrage_count    = #{barrageCount},
+                                comment_count    = #{commentCount},
+                                coin_count       = #{coinCount},
+                                recommend_type   = #{recommendType},
+                                last_play_time   = #{lastPlayTime}
+
+    </insert>
+
+    <update id="UpdateByParam">
+        update pilipili.video_info
+        set interaction = #{videoInfo.interaction}
+        where video_id = #{query.videoId}
+          and user_id = #{query.userId}
+
+    </update>
+
+    <delete id="DeleteByVideoId">
+        delete
+        from pilipili.video_info
+        where video_id = #{videoId}
+    </delete>
+
+    <select id="GetAllVideoId" resultType="string">
+        select video_id
+        from pilipili.video_info
+    </select>
+</mapper>

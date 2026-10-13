@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoCommentMapper">
+    <select id="GetCommentByCommentId" resultType="com.PiliPili.entity.pojo.VideoComment">
+        select *
+        from pilipili.video_comment
+        where comment_id = #{commentId}
+    </select>
+
+    <select id="GetCommentByVideoId" resultType="com.PiliPili.entity.pojo.VideoComment">
+        select c.*
+        <if test="queryVideoInfo">
+            ,vi.video_name, vi.video_cover, u.user_name, u.avatar, u2.user_name replyUserName
+        </if>
+        from pilipili.video_comment c
+        <if test="queryVideoInfo">
+            inner join pilipili.video_info vi on c.video_id = vi.video_id
+            left join pilipili.user u on c.user_id = u.user_id
+            left join pilipili.user u2 on c.reply_user_id = u2.user_id
+        </if>
+        <where>
+            <if test="videoId != null and videoId != '' ">
+                c.video_id = #{videoId}
+            </if>
+            <if test="videoUserId != null">
+                and c.video_user_id = #{videoUserId}
+            </if>
+            <if test="videoNameFuzzy != null and videoNameFuzzy != ''">
+                and vi.video_name like concat('%', #{videoNameFuzzy}, '%')
+            </if>
+        </where>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <select id="selectCount" resultType="integer">
+        select count(1) from video_comment v
+        <if test="queryVideoInfo">
+            inner join pilipili.video_info vi on v.video_id = vi.video_id
+        </if>
+    </select>
+
+    <resultMap id="result_comment_children" type="com.PiliPili.entity.pojo.VideoComment">
+        <id column="comment_id" property="commentId"/>
+        <result column="p_comment_id" property="pCommentId"/>
+        <result column="video_id" property="videoId"/>
+        <result column="video_user_id" property="videoUserId"/>
+        <result column="content" property="content"/>
+        <result column="img_path" property="imgPath"/>
+        <result column="user_id" property="userId"/>
+        <result column="reply_user_id" property="replyUserId"/>
+        <result column="top_type" property="topType"/>
+        <result column="post_time" property="postTime"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="hate_count" property="hateCount"/>
+        <!-- 关联查询字段-->
+        <result column="replyUserName" property="replyUserName"/>
+        <result column="replyAvatar" property="replyAvatar"/>
+
+        <collection column="comment_id" property="children"
+                    ofType="com.PiliPili.entity.pojo.VideoComment"
+                    select="com.PiliPili.mapper.VideoCommentMapper.GetCommentById"/>
+    </resultMap>
+
+    <select id="GetCommentById" resultMap="result_comment_children">
+        select v.*, u.user_name userName, u.avatar, u2.user_name replyUserName, u2.avatar replyAvatar
+        from video_comment v
+                 inner join pilipili.user u on v.user_id = u.user_id
+                 left join pilipili.user u2 on v.user_id = u2.user_id
+        where p_comment_id = #{commentId}
+        order by v.comment_id
+    </select>
+
+    <select id="GetCommentWithChildren" resultMap="result_comment_children">
+        select v.*, u.user_name userName, u.avatar
+        from video_comment v
+        inner join pilipili.user u on v.user_id = u.user_id
+        where p_comment_id = #{pCommentId} and video_id = #{videoId}
+        <if test="topType != null">
+            and top_type = #{topType}
+        </if>
+        <if test="orderByField != null">
+            order by ${orderByField}
+        </if>
+    </select>
+
+    <insert id="InsertComment" keyProperty="commentId" useGeneratedKeys="true">
+        insert into pilipili.video_comment(p_comment_id, video_id, video_user_id, content, img_path,
+                                           user_id, reply_user_id, post_time)
+        values (#{pCommentId},
+                #{videoId},
+                #{videoUserId},
+                #{content},
+                #{imgPath},
+                #{userId},
+                #{replyUserId},
+                #{postTime});
+    </insert>
+
+    <update id="UpdateCommentCount">
+        update video_comment
+        set ${field} = ${field} + #{changeCount}
+        <if test="opposeField != null">
+            , ${opposeField} = ${opposeField} + #{opposeChangeCount}
+        </if>
+        where comment_id = #{commentId};
+    </update>
+
+    <update id="UpdateComment">
+        update video_comment
+        set top_type = #{topType}
+        where video_id = #{videoId}
+          and top_type = 1;
+    </update>
+
+    <update id="UpdateCommentByCommentId">
+        update video_comment
+        set top_type = #{topType}
+        where comment_id = #{commentId};
+    </update>
+
+    <delete id="DeleteComment">
+        delete
+        from video_comment
+        where comment_id = #{commentId};
+    </delete>
+
+    <delete id="DeleteCommentByPId">
+        delete
+        from video_comment
+        where p_comment_id = #{commentId}
+          and video_id = #{videoId};
+    </delete>
+
+    <delete id="DeleteCommentByVideoId">
+        delete
+        from video_comment
+        where video_id = #{videoId}
+    </delete>
+</mapper>
+
+
+
+

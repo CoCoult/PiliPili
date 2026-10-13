@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoBarrageMapper">
+    <insert id="InsertVideoBarrage">
+        insert into pilipili.video_barrage(barrage_id, video_id, file_id, user_id, post_time, text, mode, color, time)
+        values (#{barrageId}, #{videoId}, #{fileId}, #{userId}, #{postTime}, #{text}, #{mode}, #{color}, #{time});
+    </insert>
+
+    <select id="GetVideoBarrageByVideoId" resultType="com.PiliPili.entity.pojo.VideoBarrage">
+        select *
+        from pilipili.video_barrage
+        where file_id = #{fileId}
+        order by ${orderByField}
+    </select>
+
+    <delete id="DeleteByParam">
+        delete
+        from pilipili.video_barrage
+        where video_id = #{query.videoId}
+    </delete>
+
+    <select id="SelectByParam" resultType="com.PiliPili.entity.pojo.VideoBarrage">
+        select *
+        <if test="query.queryVideoInfo">
+            ,vi.video_name, vi.video_cover, u.user_name
+        </if>
+        from pilipili.video_barrage vb
+        <if test="query.queryVideoInfo">
+            inner join pilipili.video_info vi on vb.video_id = vi.video_id
+            left join pilipili.user u on vb.user_id = u.user_id
+        </if>
+        <where>
+            <if test="query.videoId != null and query.videoId != ''">
+                vb.video_id = #{query.videoId}
+            </if>
+            <if test="query.queryVideoInfo and query.videoUserId != null and query.videoUserId != ''">
+                and vi.user_id = #{query.videoUserId}
+            </if>
+            <if test="query.videoNameFuzzy != null and query.videoNameFuzzy != ''">
+                and vi.video_name like concat ('%', #{query.videoNameFuzzy}, '%')
+            </if>
+        </where>
+        <if test="query.orderByField != null and query.orderByField != ''">
+            order by ${query.orderByField}
+        </if>
+    </select>
+
+    <select id="SelectByBarrageId" resultType="com.PiliPili.entity.pojo.VideoBarrage">
+        select *
+        from pilipili.video_barrage
+        where barrage_id = #{barrageId}
+    </select>
+
+    <delete id="DeleteByBarrageId">
+        delete
+        from pilipili.video_barrage
+        where barrage_id = #{barrageId}
+    </delete>
+
+    <select id="GetVideoBarrageCountByUserId" resultType="integer">
+        select count(*)
+        from pilipili.video_barrage
+        where video_id = #{videoId} and user_id = #{userId}
+    </select>
+</mapper>

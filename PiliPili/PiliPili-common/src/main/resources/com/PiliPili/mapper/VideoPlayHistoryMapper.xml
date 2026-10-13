@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.PiliPili.mapper.VideoPlayHistoryMapper">
+    <insert id="SaveOrUpdateVideoHistory">
+        insert into pilipili.video_play_history(user_id, video_id, file_index, last_update_time)
+        values (#{userId},
+                #{videoId},
+                #{fileIndex},
+                #{lastUpdateTime})
+        on duplicate key update
+                             file_index = #{fileIndex},
+                             last_update_time = #{lastUpdateTime}
+
+
+    </insert>
+
+    <select id="GetVideoPlayHistory" resultType="com.PiliPili.entity.pojo.VideoPlayHistory">
+        select vph.*
+        <if test="selectVideoInfo">
+            ,vi.video_name, vi.video_cover
+        </if>
+        from pilipili.video_play_history vph
+        <if test="selectVideoInfo">
+            left join pilipili.video_info vi on vph.video_id = vi.video_id
+        </if>
+        where vph.user_id = #{userId}
+        order by ${orderByField}
+    </select>
+
+    <delete id="DeleteUserVideoPlayHistory">
+        delete from pilipili.video_play_history
+        where user_id = #{userId}
+        <if test="videoId != null">
+            and video_id = #{videoId}
+        </if>
+    </delete>
+
+    <select id="GetVideoPlayHistoryVideoIdByUserId" resultType="string">
+        select video_id
+        from pilipili.video_play_history
+        where user_id = #{userId}
+    </select>
+
+    <select id="GetVideoInfoByUserIdVideoId" resultType="integer">
+        select count(*)
+        from pilipili.video_play_history
+        where user_id = #{userId} and video_id = #{videoId}
+    </select>
+</mapper>

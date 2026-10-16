@@ -64,7 +64,8 @@ public class VideoBarrageController extends BaseController {
         videoBarrage.setUserId(GetTokenUserInfo().getUserId());
         videoBarrage.setPostTime(LocalDateTime.now());
         videoBarrageService.SaveVideoBarrage(videoBarrage);
-        return Result.success();
+        // 返回带自增 barrageId 的弹幕（前端拿它登记"已渲染"，避免增量拉取重复渲染自己刚发的）
+        return Result.success(videoBarrage);
     }
 
     /**
@@ -85,6 +86,30 @@ public class VideoBarrageController extends BaseController {
         videoBarrageQuery.setFileId(fileId);
         videoBarrageQuery.setOrderByField("barrage_id asc");
         List<VideoBarrage> videoBarrageList = videoBarrageService.GetVideoBarrageByVideoId(videoBarrageQuery);
+        return Result.success(videoBarrageList);
+    }
+
+    /**
+     * 增量拉取弹幕（前端定时轮询，只取新增的弹幕，避免每次全量重拉）
+     * <p>
+     * 游标是 (fromTime, fromId) 二元组：弹幕时间精确到秒，同一秒可能有多条，
+     * 只用时间做游标会漏取同一秒内的后续弹幕。
+     *
+     * @param videoId  视频ID（用于判断弹幕开关）
+     * @param fileId   分P ID
+     * @param fromTime 已加载到的最大弹幕时间(秒)
+     * @param fromId   该时间下已加载到的最大弹幕ID
+     * @param toTime   拉取上界(秒)，不传默认 fromTime + 5 分钟
+     * @param limit    单次返回上限，不传默认 200
+     */
+    @RequestMapping("/getBarrageIncrement")
+    public Result GetBarrageIncrement(@NotEmpty String videoId, @NotEmpty String fileId,
+                                     Integer fromTime, Integer fromId, Integer toTime, Integer limit) {
+        VideoInfo videoInfo = videoInfoService.GetVideoInfoByVideoId(videoId);
+        if (videoInfo.getInteraction() != null && videoInfo.getInteraction().contains(Constants.ONE.toString())) {
+            return Result.success(new ArrayList<>());
+        }
+        List<VideoBarrage> videoBarrageList = videoBarrageService.GetVideoBarrageIncrement(fileId, fromTime, fromId, toTime, limit);
         return Result.success(videoBarrageList);
     }
 }

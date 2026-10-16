@@ -24,6 +24,17 @@ public interface VideoBarrageService {
     List<VideoBarrage> GetVideoBarrageByVideoId(VideoBarrageQuery videoBarrageQuery);
 
     /**
+     * 增量拉取弹幕（客户端带 (时间,ID) 游标轮询，只取新增部分）
+     *
+     * @param fileId   分P ID
+     * @param fromTime 已加载到的最大弹幕时间(秒)
+     * @param fromId   该时间下已加载到的最大弹幕ID
+     * @param toTime   拉取上界(秒)，不传则默认 fromTime + 一个分片时长
+     * @param limit    单次返回上限
+     */
+    List<VideoBarrage> GetVideoBarrageIncrement(String fileId, Integer fromTime, Integer fromId, Integer toTime, Integer limit);
+
+    /**
      * 查询弹幕
      * @param videoBarrageQuery
      * @return

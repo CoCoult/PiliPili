@@ -44,6 +44,7 @@ const Api = {
     userCancelTopComment: "/comment/cancelTopComment",//
     //弹幕
     loadDanmu: "/barrage/getBarrage",//
+    danmuIncrement: "/barrage/getBarrageIncrement",//增量拉取弹幕（5秒轮询，只取新增）
     postDanmu: "/barrage/postBarrage",//
     //上报在线人数
     reportVideoPlayOnline: "/video/reportVideoPlayOnline",//

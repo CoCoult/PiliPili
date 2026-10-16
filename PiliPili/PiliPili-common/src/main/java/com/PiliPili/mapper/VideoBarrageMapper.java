@@ -54,4 +54,25 @@ public interface VideoBarrageMapper {
      */
     Integer GetVideoBarrageCountByUserId(@Param("userId") String userId, @Param("videoId") String videoId);
 
+    /**
+     * 按"分P + 时间区间"查询弹幕（分片缓存回源用）
+     * <p>
+     * 时间区间为左闭右开：[timeMin, timeMax)。
+     * 必须依赖索引 idx_file_time(file_id, time, barrage_id)，否则会退化成 filesort。
+     *
+     * @param fileId  分P ID
+     * @param timeMin 起始秒（含）
+     * @param timeMax 结束秒（不含）
+     */
+    List<VideoBarrage> SelectByFileIdAndTimeRange(@Param("fileId") String fileId,
+                                                  @Param("timeMin") Integer timeMin,
+                                                  @Param("timeMax") Integer timeMax);
+
+    /**
+     * 查询某个分P弹幕的最大出现时间（用于确定分片扫描范围）
+     *
+     * @return 没有弹幕时返回 null
+     */
+    Integer SelectMaxTimeByFileId(@Param("fileId") String fileId);
+
 }

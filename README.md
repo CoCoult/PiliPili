@@ -45,8 +45,57 @@ docs/                          文档
   - 防击穿：Redis 分布式锁 + 双重检查
   - 防雪崩：TTL 随机抖动
   - 一致性：缓存删除放在**事务提交后**（`afterCommit`）
+- **弹幕分片缓存 + 增量拉取**：按 5 分钟分片存 Redis（ZSet 索引 + Hash 内容分离），未命中回源 MySQL 并回填（TTL 24h）
+  - 防大 key：索引（`score=时间, member=弹幕ID`）与内容（`field=弹幕ID → JSON`）分开存，单 key 只覆盖一个时间片
+  - 防穿透：空分片写 60s 占位；整条视频无弹幕时用 `-1` 哨兵
+  - 防击穿：分片级分布式锁 + 双重检查，50 并发只回源 1 次
+  - 增量拉取：客户端带 `(时间, ID)` 游标 5 秒轮询，只取新增弹幕并用 `emit()` 追加，不再全量重拉
 - **ES 搜索**：IK 分词 + 关键词高亮 + 搜索热词 ZSet 榜
 - **AOP 鉴权**：`@GlobalInterceptor(checkLogin = true)` 注解式登录校验
+
+## 弹幕缓存实现流程
+
+> 设计取舍与面试要点见 [`docs/弹幕Redis方案.md`](docs/弹幕Redis方案.md)。
+
+```mermaid
+flowchart TD
+    A["前端 Player.vue<br/>进入播放页 / 切分P"] --> B["GET /barrage/getBarrage<br/>videoId + fileId"]
+    B --> C{"视频关闭了弹幕?"}
+    C -->|是| Z["返回空列表"]
+    C -->|否| D["Redis: 读 danmu:maxtime:{fileId}"]
+
+    D -->|未缓存| E["MySQL: SELECT MAX(time)<br/>WHERE file_id=?"]
+    E --> F["回填 maxtime<br/>TTL 24h + 随机抖动"]
+    D -->|命中 -1 哨兵| Z
+    D -->|命中 maxTime| G["按 5 分钟切片<br/>遍历 slice 0 .. maxTime/300"]
+
+    F --> G
+
+    G --> H["Redis: 读该分片<br/>idx ZSet + data Hash"]
+    H -->|"命中（含空分片占位）"| I["合并结果"]
+    H -->|未命中| J{"SETNX 抢分片锁<br/>danmu:lock:{fileId}:{slice}"}
+    J -->|没抢到| K["等 50ms 重试读缓存 ×3<br/>仍失败则降级查库"]
+    J -->|抢到| L["双重检查缓存"]
+    L -->|已被回填| I
+    L -->|仍为空| M["MySQL: SELECT * WHERE file_id=?<br/>AND time >= 片起 AND time < 片止<br/>走索引 idx_file_time"]
+    M --> N["回填缓存<br/>ZADD idx / HSET data / TTL 24h<br/>空分片写 60s 占位"]
+    N --> O["释放锁（Lua 校验凭证）"]
+    O --> I
+    K --> I
+    I --> P["按 (time, ID) 升序返回"]
+
+    P --> Q["前端渲染弹幕 + 记录游标 (maxTime, maxId)"]
+    Q --> R["每 5 秒: GET /barrage/getBarrageIncrement<br/>fromTime/fromId → toTime"]
+    R --> S["服务端只取游标之后的弹幕<br/>跨 1~2 个分片"]
+    S --> T["前端按 barrageId 去重<br/>emit() 追加新弹幕"]
+    T --> R
+
+    U["新增/删除弹幕"] --> V["事务提交后<br/>删除该分片缓存 + maxtime"]
+    V -.下次读请求自然回源重建.-> H
+    W["删除视频"] --> X["清空该分P全部分片缓存"]
+```
+
+**关键点**：读路径**不写 MySQL**，只有缓存未命中才回源一次并回填；写路径（新增/删除弹幕）只做**缓存失效**，下次读请求自然重建——这正是 Cache-Aside 的标准姿势。
 
 ## 快速开始
 
@@ -154,7 +203,8 @@ powershell -ExecutionPolicy Bypass -File docs\redis_status.ps1 -MonitorSeconds 1
 
 ## 已知待优化项
 
-- [ ] 点赞/投币/收藏状态用 Set 或 Bitmap 判重（当前每次查库）
+- [ ] 弹幕写路径改造：`INCR` 生成弹幕 ID + write-behind 异步批量落库 + 计数 Redis 化（消除 `video_info` 热点行）+ ES 更新移出事务
+- [ ] 点赞/投币/收藏状态用 Set 或 Bitmap 判重（当前每次查库，且 `user_action` 缺唯一索引）
 - [ ] 热榜改用 ZSet（当前 `ORDER BY play_count` 走 MySQL）
 - [ ] 接口限流（Redis + Lua 令牌桶）
 - [ ] 转码队列升级为可靠队列（Redis Stream 或 MQ，当前 List 无 ack/重试）

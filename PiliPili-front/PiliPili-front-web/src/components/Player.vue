@@ -129,10 +129,14 @@ const initPlayer = () => {
         },
         beforeEmit: async (danmu) => {
           let result = await postDanmu(danmu);
-          //重新获取一下弹幕列表
-          loadDanmuList();
           if (!result) {
             return false;
+          }
+          // 新增成功后：把服务端返回的弹幕ID登记为"已见过"，
+          // 这样 5 秒后的增量拉取不会把刚发的弹幕重复渲染一遍
+          if (result.data && result.data.barrageId) {
+            seenDanmuIds.add(result.data.barrageId);
+            danmuCount.value = seenDanmuIds.size;
           }
           mitter.emit("danmSend");
           proxy.Message.success("发布成功");
@@ -178,6 +182,10 @@ onMounted(() => {
 
   mitter.on("changeP", (_fileId) => {
     fileId.value = _fileId;
+    // 切分P：清空去重集合与游标，否则新分P的弹幕会被当做"已见过"而不渲染
+    seenDanmuIds.clear();
+    danmuCursor = { time: 0, id: 0 };
+    danmuCount.value = 0;
     player.switch = `${proxy.Api.getVideoResource}/${_fileId}/`;
     player.plugins.artplayerPluginDanmuku.load();
   });
@@ -213,6 +221,25 @@ const postDanmu = (danmu) => {
 };
 
 const danmuCount = ref(0);
+// 已渲染的弹幕ID集合：增量拉取会重复覆盖"当前播放窗口"，用它在客户端去重
+const seenDanmuIds = new Set();
+// 已加载到的 (时间, ID) 游标：服务端按它只返回更新的弹幕
+let danmuCursor = { time: 0, id: 0 };
+
+const updateDanmuCursor = (list) => {
+  (list || []).forEach((item) => {
+    if (item.barrageId != null) {
+      seenDanmuIds.add(item.barrageId);
+    }
+    const time = item.time || 0;
+    const id = item.barrageId || 0;
+    if (time > danmuCursor.time || (time === danmuCursor.time && id > danmuCursor.id)) {
+      danmuCursor = { time, id };
+    }
+  });
+};
+
+// 首次进入/切P：按时间分片一次性加载（服务端走 Redis 分片缓存，未命中才回源 MySQL）
 const loadDanmuList = async () => {
   if (!fileId.value) {
     return [];
@@ -227,15 +254,60 @@ const loadDanmuList = async () => {
   if (!result) {
     return;
   }
+  updateDanmuCursor(result.data);
   mitter.emit("loadDanmu", result.data);
   danmuCount.value = result.data.length;
   return result.data;
+};
+
+// 增量拉取：只取"当前播放位置附近、且比游标更新"的弹幕，用 emit 追加而不是全量重建
+const loadDanmuIncrement = async () => {
+  if (!fileId.value || !player || !player.plugins?.artplayerPluginDanmuku) {
+    return;
+  }
+  const current = Math.floor(player.currentTime || 0);
+  // 往回留 5 秒窗口，避免刚发布、时间点略早于当前进度的弹幕被漏掉；往后预取 30 秒
+  const fromTime = Math.max(0, Math.min(danmuCursor.time, current - 5));
+  const fromId = fromTime === danmuCursor.time ? danmuCursor.id : 0;
+  const toTime = current + 30;
+  if (toTime <= fromTime) {
+    return;
+  }
+  let result = await proxy.Request({
+    url: proxy.Api.danmuIncrement,
+    params: {
+      fileId: fileId.value,
+      videoId: route.params.videoId,
+      fromTime,
+      fromId,
+      toTime,
+    },
+    showError: false,
+  });
+  if (!result || !result.data || result.data.length === 0) {
+    return;
+  }
+  const fresh = result.data.filter((item) => item.barrageId == null || !seenDanmuIds.has(item.barrageId));
+  updateDanmuCursor(result.data);
+  fresh.forEach((item) => {
+    player.plugins.artplayerPluginDanmuku.emit({
+      time: item.time,
+      text: item.text,
+      color: item.color,
+      mode: item.mode,
+    });
+  });
+  if (fresh.length > 0) {
+    danmuCount.value = seenDanmuIds.size;
+  }
 };
 
 let timer = ref(null);
 const startTimer = () => {
   timer.value = setInterval(() => {
     reportVideoPlayOnline();
+    // 顺便增量拉取弹幕（复用同一个 5 秒定时器，不再额外开定时器）
+    loadDanmuIncrement();
   }, 5000);
 };
 

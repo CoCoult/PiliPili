@@ -187,6 +187,137 @@ public class RedisUtils<V> {
         redisTemplate.opsForZSet().incrementScore(key, v, 1);
     }
 
+    // ==================== ZSet / Hash 批量操作（弹幕分片缓存用）====================
+
+    /**
+     * ZSet 添加/覆盖一个成员
+     *
+     * @param key   键
+     * @param value 成员（如弹幕 id）
+     * @param score 分值（如弹幕出现时间）
+     */
+    public boolean zadd(String key, V value, double score) {
+        try {
+            redisTemplate.opsForZSet().add(key, value, score);
+            return true;
+        } catch (Exception e) {
+            logger.error("zadd失败,key:{},value:{}", key, value, e);
+            return false;
+        }
+    }
+
+    /**
+     * 按分值范围取成员（升序），支持分页偏移
+     *
+     * @param min    最小分值（含）
+     * @param max    最大分值（含）
+     * @param offset 起始偏移
+     * @param count  最多取多少个
+     */
+    public Set<V> zrangeByScore(String key, double min, double max, long offset, long count) {
+        try {
+            return redisTemplate.opsForZSet().rangeByScore(key, min, max, offset, count);
+        } catch (Exception e) {
+            logger.error("zrangeByScore失败,key:{}", key, e);
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * 按分值范围取成员（升序，不限数量）
+     */
+    public Set<V> zrangeByScore(String key, double min, double max) {
+        try {
+            return redisTemplate.opsForZSet().rangeByScore(key, min, max);
+        } catch (Exception e) {
+            logger.error("zrangeByScore失败,key:{}", key, e);
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * 移除 ZSet 成员
+     */
+    public Long zrem(String key, Object... values) {
+        try {
+            return redisTemplate.opsForZSet().remove(key, values);
+        } catch (Exception e) {
+            logger.error("zrem失败,key:{}", key, e);
+            return 0L;
+        }
+    }
+
+    /**
+     * 批量写 Hash（field→value），并设置整个 key 的过期时间(毫秒)
+     */
+    public boolean hmset(String key, Map<String, V> map, long milliseconds) {
+        try {
+            redisTemplate.opsForHash().putAll(key, map);
+            if (milliseconds > 0) {
+                expire(key, milliseconds);
+            }
+            return true;
+        } catch (Exception e) {
+            logger.error("hmset失败,key:{}", key, e);
+            return false;
+        }
+    }
+
+    /**
+     * 批量读 Hash，返回顺序与 fields 一致（不存在的 field 返回 null）
+     */
+    public List<V> hmget(String key, Collection<String> fields) {
+        try {
+            return redisTemplate.<String, V>opsForHash().multiGet(key, fields);
+        } catch (Exception e) {
+            logger.error("hmget失败,key:{}", key, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 删除 Hash 的一个或多个 field
+     */
+    public Long hdel(String key, Object... fields) {
+        try {
+            return redisTemplate.opsForHash().delete(key, fields);
+        } catch (Exception e) {
+            logger.error("hdel失败,key:{}", key, e);
+            return 0L;
+        }
+    }
+
+    /**
+     * Hash 元素个数
+     */
+    public Long hsize(String key) {
+        try {
+            return redisTemplate.opsForHash().size(key);
+        } catch (Exception e) {
+            logger.error("hsize失败,key:{}", key, e);
+            return 0L;
+        }
+    }
+
+    /**
+     * ZSet 元素个数
+     */
+    public Long zcard(String key) {
+        try {
+            return redisTemplate.opsForZSet().zCard(key);
+        } catch (Exception e) {
+            logger.error("zcard失败,key:{}", key, e);
+            return 0L;
+        }
+    }
+
+    /**
+     * 剩余过期时间(秒)，-1=永久，-2=key 不存在
+     */
+    public Long getExpireSeconds(String key) {
+        return redisTemplate.getExpire(key, TimeUnit.SECONDS);
+    }
+
 
     public List<V> getZSetList(String key, Integer count) {
         Set<V> topElements = redisTemplate.opsForZSet().reverseRange(key, 0, count);

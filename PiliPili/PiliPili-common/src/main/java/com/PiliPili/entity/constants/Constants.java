@@ -67,4 +67,40 @@ public class Constants {
     /** 重建锁自动过期时间(秒)：10 秒（防死锁：持锁线程挂掉后自动释放） */
     public static final int VIDEO_INFO_LOCK_SECONDS = 10;
 
+    // ==================== 弹幕缓存（按时间分片 + 索引/内容分离）====================
+    /**
+     * 弹幕分片索引：PiliPili:danmu:idx:{fileId}:{slice}
+     * ZSet：score=弹幕出现时间(秒)，member=barrageId
+     * 为什么"索引"和"内容"要分开？
+     * 单 key 存整条视频的弹幕会成为 big key（10 万条 ≈ 20MB，阻塞、删除慢、分片不均）；
+     * 拆成"轻量索引 + 分片内容"后，既能按时间范围查询/按 id 精确删除，单 key 又只有几十 KB。
+     */
+    public static final String REDIS_KEY_DANMU_INDEX = REDIS_KEY_PREFIX + "danmu:idx:";
+    /** 弹幕分片内容：PiliPili:danmu:data:{fileId}:{slice}，Hash：field=barrageId，value=弹幕 JSON */
+    public static final String REDIS_KEY_DANMU_DATA = REDIS_KEY_PREFIX + "danmu:data:";
+    /** 空分片占位：PiliPili:danmu:empty:{fileId}:{slice}（防穿透：确实没有弹幕的分片也标记一下） */
+    public static final String REDIS_KEY_DANMU_EMPTY = REDIS_KEY_PREFIX + "danmu:empty:";
+    /** 分片回源锁：PiliPili:danmu:lock:{fileId}:{slice}（防击穿：同一分片只放一个线程回源） */
+    public static final String REDIS_KEY_DANMU_LOCK = REDIS_KEY_PREFIX + "danmu:lock:";
+    /**
+     * 弹幕最大时间缓存：PiliPili:danmu:maxtime:{fileId}
+     * 用途：全量加载时要知道"分片扫描到哪一片为止"，否则每次请求都要 select max(time)。
+     * 存 -1 表示"该分片确认没有弹幕"（防穿透）。
+     */
+    public static final String REDIS_KEY_DANMU_MAX_TIME = REDIS_KEY_PREFIX + "danmu:maxtime:";
+    /** 分片粒度(秒)：5 分钟/片。片越小回源越细但 key 越多；按 1 条/秒的密度，单片≈300 条≈60KB */
+    public static final int DANMU_SLICE_SECONDS = 5 * 60;
+    /** 分片缓存基础过期时间(秒)：24 小时 */
+    public static final int DANMU_CACHE_BASE_SECONDS = 24 * 60 * 60;
+    /** 分片缓存 TTL 随机抖动(秒)：0~10 分钟（防雪崩：避免同一视频的所有分片同时过期） */
+    public static final int DANMU_CACHE_RANDOM_SECONDS = 10 * 60;
+    /** 空分片占位过期时间(秒)：60 秒（防穿透，注意要短，否则新弹幕迟迟不可见） */
+    public static final int DANMU_EMPTY_CACHE_SECONDS = 60;
+    /** 分片回源锁自动过期(秒)：10 秒 */
+    public static final int DANMU_LOCK_SECONDS = 10;
+    /** 单次最多加载的分片数（保护：避免超长视频/异常 duration 导致一次读几十个分片） */
+    public static final int DANMU_MAX_SLICE_LOAD = 60;
+    /** 增量拉取单次默认返回上限 */
+    public static final int DANMU_INCREMENT_DEFAULT_LIMIT = 200;
+
 }

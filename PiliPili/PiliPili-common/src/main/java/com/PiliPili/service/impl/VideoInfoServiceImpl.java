@@ -358,6 +358,12 @@ public class VideoInfoServiceImpl implements VideoInfoService {
 
             VideoInfoFileQuery videoInfoFileQuery = new VideoInfoFileQuery();
             videoInfoFileQuery.setVideoId(videoId);
+
+            // 注意：必须在删除 video_info_file 之前查出分P列表！
+            // 原代码是在 deleteByVideoId 之后才查，结果永远查出空列表，
+            // 导致转码后的视频文件从来没被真正删除（磁盘泄漏），弹幕缓存也拿不到 fileId。
+            List<VideoInfoFile> videoInfoFileList = this.videoInfoFileMapper.GetVideoPListByVideoId(videoInfoQuery);
+
             //删除正式视频分p
             this.videoInfoFileMapper.deleteByVideoId(videoInfoFileQuery);
 
@@ -374,8 +380,9 @@ public class VideoInfoServiceImpl implements VideoInfoService {
             //删除评论
             this.videoCommentMapper.DeleteCommentByVideoId(videoId);
 
-            List<VideoInfoFile> videoInfoFileList = this.videoInfoFileMapper.GetVideoPListByVideoId(videoInfoQuery);
             for (VideoInfoFile videoInfoFile : videoInfoFileList) {
+                //清空该分P的弹幕缓存（索引/内容/空占位/最大时间）
+                redisComponent.deleteDanmuCacheAllSlices(videoInfoFile.getFileId());
                 try {
                     FileUtils.deleteDirectory(new File(appConfig.getProjectFolder() + Constants.FILE_FOLDER + videoInfoFile.getFilePath()));
                 } catch (IOException e) {

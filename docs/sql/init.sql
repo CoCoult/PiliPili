@@ -172,7 +172,8 @@ CREATE TABLE `video_barrage` (
   `time` int NULL DEFAULT NULL COMMENT '弹幕出现时间(秒)',
   PRIMARY KEY (`barrage_id`) USING BTREE,
   INDEX `idx_video_id`(`video_id` ASC) USING BTREE,
-  INDEX `idx_file_id`(`file_id` ASC) USING BTREE
+  INDEX `idx_file_id`(`file_id` ASC) USING BTREE,
+  INDEX `idx_file_time`(`file_id` ASC, `time` ASC, `barrage_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '弹幕表' ROW_FORMAT = Dynamic;
 
 -- 9. user_action 用户行为表
